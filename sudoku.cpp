@@ -193,9 +193,9 @@ bool Sudoku::fillBoardRecursive(const Coords& currCell) {
     // Check if reached end of board -> all done
     if (outOfBounds(currCell)) return true;
 
-    // Find possible values
+    // Find all valid values
     std::vector<int> valuePool = getAllValidValues(currCell);
-    shuffle(valuePool); // probably more efficient on average
+    shuffle(valuePool);
     
     while (!valuePool.empty()) {
         setCell(currCell, valuePool.back());
@@ -329,23 +329,19 @@ bool SudokuSolver::solveRecursive(Sudoku& puzzle, const Coords& currCell) {
 
     // Skip clue cells
     if (!puzzle.isDraftCell(currCell)) return solveRecursive( puzzle, puzzle.getNextCell(currCell) );
-
-    // Find possible values
-    std::vector<int> valuePool = puzzle.getAllValidValues(currCell);
-    shuffle(valuePool); // probably more efficient on average
     
-    while (!valuePool.empty()) {
-        int val = valuePool.back();
-        puzzle.setCell(currCell, val);
+    // Go through all possible digits
+    int puzzleSize = puzzle.getSize();
+    for (int val = 1; val <= puzzleSize; val++) {
+        // Skip invalid values due to sudoku rules
+        if (!puzzle.isValidValue(currCell, val)) continue; 
 
-        // Try building board with this value set
+        // Try building board with this value on current cell
+        puzzle.setCell(currCell, val);
         bool isValidBoard = solveRecursive( puzzle, puzzle.getNextCell(currCell) );
 
         // Cannot build valid board with this value -> try next value
-        if (!isValidBoard) {
-            puzzle.setCell(currCell, 0);
-            valuePool.pop_back();
-        }
+        if (!isValidBoard) puzzle.setCell(currCell, 0);
 
         // Valid board found -> all done
         else return true;
@@ -370,21 +366,18 @@ bool SudokuSolver::hasMultipleSolutions(Sudoku& puzzle, const Coords& currCell, 
     // Skip clue cells
     if (!puzzle.isDraftCell(currCell)) return hasMultipleSolutions( puzzle, puzzle.getNextCell(currCell), solutionFound );
 
-    // Find possible values for cell
-    std::vector<int> valuePool = puzzle.getAllValidValues(currCell);
-    shuffle(valuePool); // probably more efficient on average
-    
-    while (!valuePool.empty()) {
-        puzzle.setCell(currCell, valuePool.back());
+    // Go through all possible digits
+    int puzzleSize = puzzle.getSize();
+    for (int val = 1; val <= puzzleSize; val++) {
+        // Skip invalid values due to sudoku rules
+        if (!puzzle.isValidValue(currCell, val)) continue; 
 
         // Try building board with this value on current cell
+        puzzle.setCell(currCell, val);
         bool isValidBoard = hasMultipleSolutions( puzzle, puzzle.getNextCell(currCell), solutionFound );
 
         // Could not find second solution with this value -> undo and try next value
-        if (!isValidBoard) {
-            puzzle.setCell(currCell, 0);
-            valuePool.pop_back();
-        }
+        if (!isValidBoard) puzzle.setCell(currCell, 0);
 
         // Second solution found -> sudoku is not unique
         else return true;
